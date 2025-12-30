@@ -1,0 +1,13 @@
+name: netprobe
+description: Netprobe application layer
+category: general
+
+mmdebstrap:
+  packages:
+    - iputils-ping
+    - traceroute
+    - net-tools
+    - dnsutils
+    - curl
+    - wget
+    - iproute2

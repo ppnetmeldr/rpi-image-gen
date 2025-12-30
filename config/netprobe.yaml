@@ -9,3 +9,4 @@ image:
 
 layer:
   base: trixie-minbase
+  netprobe: netprobe
