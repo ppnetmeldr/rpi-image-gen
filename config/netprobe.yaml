@@ -5,8 +5,13 @@ image:
   layer: image-rpios
   boot_part_size: 200%
   root_part_size: 300%
-  name: deb13-arm64-min
+  name: netprobe
 
 layer:
-  base: trixie-minbase
+  base: bookworm-minbase
   netprobe: netprobe
+
+# Optional: customize netprobe variables
+vars:
+  netprobe_install_path: /opt/netmeldr/netprobe 
+  netprobe_enable_service: y

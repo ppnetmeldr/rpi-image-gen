@@ -1,13 +1,71 @@
-name: netprobe
-description: Netprobe application layer
-category: general
-
+# METABEGIN
+# X-Env-Layer-Name: netprobe
+# X-Env-Layer-Desc: NetMeldr NetProbe monitoring agent installation.
+# X-Env-Layer-Version: 1.0.0
+#
+# X-Env-VarPrefix: netprobe
+#
+# X-Env-Var-install_path: /opt/netmeldr/netprobe
+# X-Env-Var-install_path-Desc: Installation directory for NetProbe.
+# X-Env-Var-install_path-Required: n
+# X-Env-Var-install_path-Valid: string
+# X-Env-Var-install_path-Set: y
+#
+# X-Env-Var-enable_service: y
+# X-Env-Var-enable_service-Desc: Enable netprobe systemd service on boot.
+# X-Env-Var-enable_service-Required: n
+# X-Env-Var-enable_service-Valid: bool
+# X-Env-Var-enable_service-Set: y
+# METAEND
+---
 mmdebstrap:
   packages:
-    - iputils-ping
-    - traceroute
-    - net-tools
-    - dnsutils
+    - python3
+    - python3-pip
     - curl
-    - wget
-    - iproute2
+    - ca-certificates
+  
+  customize-hooks:
+    # Run install_netprobe.sh if present (files already in place via overlay)
+    - |-
+      set -e
+      echo "Configuring NetProbe..."
+      
+      INSTALL_SCRIPT="${IGconf_netprobe_install_path}/install_netprobe.sh"
+      
+      if [ -f "$1${INSTALL_SCRIPT}" ]; then
+        echo "Running install_netprobe.sh..."
+        chmod +x "$1${INSTALL_SCRIPT}"
+        uchroot "$1" bash -c "cd ${IGconf_netprobe_install_path} && ./install_netprobe.sh" || {
+          echo "WARNING: install_netprobe.sh failed" >&2
+        }
+      fi
+    
+    # Copy and enable systemd services
+    - |-
+      if igconf isy netprobe_enable_service ; then
+        echo "Setting up NetProbe systemd services..."
+        
+        # Copy service files from netprobe/linux/ to systemd
+        if [ -d "$1${IGconf_netprobe_install_path}/linux" ]; then
+          for svc_file in "$1${IGconf_netprobe_install_path}"/linux/*.service; do
+            if [ -f "$svc_file" ]; then
+              svc_name=$(basename "$svc_file")
+              echo "Installing service: $svc_name"
+              cp "$svc_file" "$1/etc/systemd/system/"
+              chmod 644 "$1/etc/systemd/system/$svc_name"
+              
+              # Enable the service
+              uchroot "$1" systemctl enable "$svc_name" || true
+            fi
+          done
+        fi
+      fi
+    
+    # Set permissions
+    - |-
+      echo "Setting NetProbe permissions..."
+      chmod -R 755 "$1${IGconf_netprobe_install_path}"
+      find "$1${IGconf_netprobe_install_path}" -type f -name "*.sh" -exec chmod +x {} \; || true
+      find "$1${IGconf_netprobe_install_path}" -type f -name "*.py" -exec chmod +x {} \; || true
+      echo "NetProbe setup complete!"
